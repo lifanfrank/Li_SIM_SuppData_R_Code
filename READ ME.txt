@@ -1,0 +1,21 @@
+The ZIP folder contains files for implementing the estimating equations used in "Power and sample size requirements for GEE analyses of 
+cluster randomized crossover trials" by Li, Forbes, Turner and Preisser. Two simulated data sets are used as illustrative examples.
+
+Continuous and binary outcomes are generated from a marginal mean model with nested exchangeable correlation structures to mimic a cross-sectional
+cluster randomized crossover trial. 
+
+List of Files:
+1) Make Continuous Data.r = R file for simulating continuous outcome data
+2) Make Binary Data.r = R file for simulating binary outcome data
+3) simdata_cont.csv = simulated trial data with continuous individual outcomes
+4) simdata_bin.csv = simulated trial data with binary individual outcomes
+5) contMAEE.r = GEE and MAEE program for clustered continuous outcomes, with (canonical) identity link
+6) binMAEE.r = GEE and MAEE program for clustered binary outcomes, with (canonical) logit link
+7) Illustration of GEE Analysis.Rmd = R markdown file for illustrating the estimation equation methods using simulated trial data 3) and 4)
+8) Illustration of GEE Analysis.pdf = pdf file for illustrating the estimation equation methods using simulated trial data 3) and 4)
+
+NOTES:  1) This program requires you to install the MASS package.
+	2) The program demonstrates the computation for a trial with 20 clusters, 65 individuals per cluster-period. 
+        3) The simulated trial data are sorted by cluster id, and then by period. The columns of the trial data are (from left to right), 
+           outcome (in long format), individual id, cluster id, period id, indicator for period 1, indicator for period 2, indicator for treatment. 
+	4) You will need to change path names before running the programs. 

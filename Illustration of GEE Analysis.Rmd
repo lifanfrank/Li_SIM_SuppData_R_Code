@@ -1,0 +1,238 @@
+---
+title: "Illustrative GEE Analysis of Cluster Randomized Crossover (CRXO) Trials"
+author: "Fan Li"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Trial Data with Continuous Outcomes
+
+
+We first read in the simulated trial data set with continuous individual outcomes.
+
+
+```{r}
+dir<-"D:/Research/CRT Methodology/CRXOSampleSize/Latex/Submission/R Code"
+
+setwd(dir)
+
+simdata_cont<-read.csv("simdata_cont.csv", header = TRUE)
+```
+
+
+The first 6 rows of the data set looks like the following:
+
+
+```{r}
+head(simdata_cont)
+```
+
+
+From left to right, the columns of data are outcome (in long format), individual id, cluster id, period id, indicator for period 1, indicator for period 2 and indicator for treatment. Note that this is a simulated two-treatment two-period, cross-sectional CRXO trial with 20 clusters, 65 individuals per cluster (cluster-period size). We will extract the following key elements from the data set. 
+
+
+```{r}
+# outcomes
+y<-as.numeric(simdata_cont$y)     
+
+# cluster identifier
+id<-as.numeric(simdata_cont$cluster)   
+
+# period identifier
+period<-as.numeric(simdata_cont$period)    
+
+# marginal mean design matrix
+X<-simdata_cont[,c("period1","period2","treatment")]
+X<-as.matrix(X)                                           
+
+# treatment indicator
+trt<-X[,"treatment"]
+
+# number of clusters
+n<-length(unique(id))   
+
+# number of periods
+t<-dim(X)[2]-1        
+
+# cluster size (across all periods)
+clsize<-as.numeric(table(id))
+
+# cluster-period size (per cluster; balanced)
+m<-clsize/t                                                
+```
+
+
+By summarizing the cluster-period means by the following plot, we conjecture that there is a gently decreasing period effect over time, and the treatment (denote A, B as treatment and control) appears to reduce the magnitude of the outcome. 
+
+
+```{r}
+# Cluster-period means
+clp_mu<-tapply(y,list(id,period),FUN=mean)
+```
+
+```{r echo=FALSE}
+par(mfrow=c(1,2))
+
+# A-B Sequence
+plot(1:2,clp_mu[1,],type='l',lwd=2,col="blue",xlab="Period",
+     ylab="Cluster-period means",main="A-B Sequence",ylim=c(-1.2,1.2),xaxt = 'n')
+axis(1, c(1,2), las = 1) 
+for(i in 2:10) lines(1:2,clp_mu[i,],type='l',lwd=2,col="blue")
+
+# B-A Sequence
+plot(1:2,clp_mu[11,],type='l',lwd=2,col="blue",xlab="Period",
+     ylab="Cluster-period means",main="B-A Sequence",ylim=c(-1.2,1.2),xaxt = 'n')
+axis(1, c(1,2), las = 1) 
+for(i in 11:20) lines(1:2,clp_mu[i,],type='l',lwd=2,col="blue")
+```
+
+
+To perform the GEE and MAEE analysis of the trial data, we need to obtain the design matrix for the correlation parameters as follows.
+
+
+```{r}
+# Create (large) design matrix for correlations
+CREATEZ<-function(n,m,t){
+  # correlation position indicators
+  alpha0_pos<-1
+  alpha1_pos<-2
+  zrow<-diag(2)
+  Z<-NULL
+  
+  for(i in 1:n){
+    mi<-m[i]
+    bm1<-(1-alpha0_pos)*diag(t*mi)
+    bm2<-(alpha0_pos-alpha1_pos)*kronecker(diag(t),matrix(1,mi,mi))
+    bm3<-alpha1_pos*matrix(1,t*mi,t*mi)
+    POS<-bm1+bm2+bm3
+    
+    for(j in 1:(t*mi-1)){
+      for(k in (j+1):(t*mi)){
+        Z<-rbind(Z,zrow[POS[j,k],])
+      }
+    }
+    # print(i)
+  }
+  return(Z)
+}
+
+# large matrix (may take a minute to run)
+Z<-CREATEZ(n,m,t)                                         
+```
+
+
+We confirm the exploratory analysis of the trial data by fitting the GEE and MAEE using the following code. Detailed descriptions of the input arguments are available in the \verb"contMAEE.R" program. Following the notations in Li, Forbes, Turner and Preisser, we use the marginal mean model 
+$$\mu_{ijk}=\tau_j+\delta X_{ij},$$
+where the link is the identity function (canonical link), $\tau_j$ is the $j$th period effect, $X_{ij}$ is the treatment indicator of cluster $i$ in period $j$, $\delta$ is the marginal intervention effect. Further, the nested exchangeable correlation structure is parameterized with two correlation parameters $(\alpha_0,\alpha_1)$. 
+
+
+```{r}
+# Source the function
+source("contMAEE.R")
+
+# Implement the function
+contMAEE(y=y,X=X,id=id,n=clsize,Z=Z,maxiter=25,epsilon=0.001,printrange="NO",
+         shrink="ALPHA",makevone="NO")
+```
+
+
+The treatment effect estimate is -0.22, which is slightly larger but close to the truth, -0.25, used in the data generation. A gently decreasing period effect is reflected in the parameter estimates. The estimates for within-period correlation $\alpha_0$ and inter-period correlation $\alpha_1$ are close to the true values, 0.1 and 0.05. For the class of bias-corrected sandwich variances, we observe that BC0$<$BC1$<$BC2 and BC1$\approx$BC3. Note that this is an illustrative analysis of only one data set with a limited number of clusters.
+
+
+## Trial Data with Binary Outcomes
+
+
+We read in the simulated trial data set with binary individual outcomes. 
+
+
+```{r}
+simdata_bin<-read.csv("simdata_bin.csv", header = TRUE)
+```
+
+
+The first 6 rows of the data set looks like the following:
+
+
+```{r}
+head(simdata_bin)
+```
+
+
+We will extract the following key elements from the trial data set as before.
+
+
+```{r}
+# outcomes
+y<-as.numeric(simdata_bin$y)    
+
+# cluster identifier
+id<-as.numeric(simdata_bin$cluster)                  
+
+# period identifier
+period<-as.numeric(simdata_bin$period)      
+
+# marginal mean design matrix
+X<-simdata_cont[,c("period1","period2","treatment")]
+X<-as.matrix(X)                                           
+
+# treatment indicator
+trt<-X[,"treatment"]
+
+# number of clusters
+n<-length(unique(id))   
+
+# number of periods
+t<-dim(X)[2]-1        
+
+# cluster size (across all periods)
+clsize<-as.numeric(table(id))
+
+# cluster-period size (per cluster; balanced)
+m<-clsize/t                                                
+```
+
+
+By summarizing the cluster-period rates by the following plot, we conjecture that there is a gently decreasing period effect over time, and the treatment appears to be associated with decreased rates. 
+
+
+```{r}
+# Cluster-period means
+clp_mu<-tapply(y,list(id,period),FUN=mean)
+```
+
+```{r echo=FALSE}
+par(mfrow=c(1,2))
+
+# A-B Sequence
+plot(1:2,clp_mu[1,],type='l',lwd=2,col="blue",xlab="Period",
+     ylab="Cluster-period means",main="A-B Sequence",ylim=c(0.1,0.8),xaxt = 'n')
+axis(1, c(1,2), las = 1) 
+for(i in 2:10) lines(1:2,clp_mu[i,],type='l',lwd=2,col="blue")
+
+# B-A Sequence
+plot(1:2,clp_mu[11,],type='l',lwd=2,col="blue",xlab="Period",
+     ylab="Cluster-period means",main="B-A Sequence",ylim=c(0.1,0.8),xaxt = 'n')
+axis(1, c(1,2), las = 1) 
+for(i in 11:20) lines(1:2,clp_mu[i,],type='l',lwd=2,col="blue")
+```
+
+
+Since this trial data possess the same structure as the previous one (20 clusters, 65 individuals per cluster-period), we could use the same design matrix for estimating correlation parameters. We confirm the exploratory analysis of the trial data by fitting the GEE and MAEE in the following analysis. We use the marginal mean model 
+$$\text{logit}(\mu_{ijk})=\tau_j+\delta X_{ij},$$
+where the link is the logistic function (canonical link), $\tau_j$ is the $j$th period effect, $X_{ij}$ is the treatment indicator of cluster $i$ in period $j$, $\delta$ is the marginal intervention effect on the log odds ratio scale. Again, the nested exchangeable correlation structure is parameterized with two correlation parameters $(\alpha_0,\alpha_1)$.  
+
+
+```{r}
+# Source the function
+source("binMAEE.R")
+
+# Implement the function
+binMAEE(y=y,X=X,id=id,n=clsize,Z=Z,maxiter=25,epsilon=0.001,printrange="NO",
+        shrink="ALPHA",makevone="NO")
+```
+
+
+We observe the marginal treatment effect in the odds ratio scale to be $\exp(\hat{\delta})\approx 0.63$, which is close to the true value, 0.6, used in the data generation. A gently decreasing period effect is reflected in the parameter estimates. The estimates for within-period correlation $\alpha_0$ and inter-period correlation $\alpha_1$ are close to the true values, 0.1 and 0.05. We note that this is an illustrative analysis of only one data set with a limited number of clusters.
