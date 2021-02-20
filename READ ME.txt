@@ -1,5 +1,5 @@
 The ZIP folder contains files for implementing the estimating equations used in "Power and sample size requirements for GEE analyses of 
-cluster randomized crossover trials" by Li, Forbes, Turner and Preisser. Two simulated data sets are used as illustrative examples.
+cluster randomized crossover trials" by Li, Forbes, Turner and Preisser (Statistics in Medicine, 2018). Two simulated data sets are used as illustrative examples.
 
 Continuous and binary outcomes are generated from a marginal mean model with nested exchangeable correlation structures to mimic a cross-sectional
 cluster randomized crossover trial. 
